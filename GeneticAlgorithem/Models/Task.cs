@@ -81,11 +81,14 @@ namespace GeneticAlgorithem.Models
 
         private double CalculateFitness(Chromosome chromosome)
         {
-            //run through each city in the order specified in the chromosome
+            //get the current user specified in the chromosome
             User currUser = (User)chromosome.Genes[0].ObjectValue;
 
+            // Get the user calender
             Calendar userCalendar = GA.allCalenders.FirstOrDefault(c => c.userId == currUser.uid);
 
+            // Create event for the task
+            // the event is start in 9am and end in 9+remaining time of the task
             Event newEvent = new Event()
             {
                 title = this.title,
@@ -94,15 +97,21 @@ namespace GeneticAlgorithem.Models
                 endDate = GA.currBoard.startDate.Date.AddHours(Globals.workStartHour).AddHours(this.remainingTime)
             };
 
-            // Check if time is ok - today and forword
+            // Check if time is ok 
+            // start date is today or forword
+            // else -> increase event time with 30m
+            // TODO
 
-            // Check if event is ok in the calender
+            
+            // Check event fitness in the calender
             if (userCalendar == null)
             {
-                // it OK
+                // the user has nothing in the calender so his fitness is high!
+                // TODO
             }
             else
             {
+                // The user has events in the calender so we need to check when is the best time to put this task-event
                 foreach (Event existEvent in userCalendar.events)
                 {
                     if (newEvent.doesEventsOverlapping(existEvent))
@@ -115,7 +124,7 @@ namespace GeneticAlgorithem.Models
                 }
             }
 
-            // fitness
+            // return default fitness
             return 0;
         }
         
