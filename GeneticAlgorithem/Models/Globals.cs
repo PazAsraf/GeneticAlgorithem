@@ -10,6 +10,9 @@ namespace GeneticAlgorithem.Models
         public const string Connection_String = "mongodb://localhost:27017";
         public const string BoardCollection = "Boards";
         public const string CalendersCollection = "Calendars";
+
+        public const string statusDone = "done";
+
         public const string Web_Config_Key_DB = "DB";
 
         public const double workStartHour = 9;

@@ -32,7 +32,7 @@ namespace GeneticAlgorithem.Models
 
         public static void SplitTasks()
         {
-            foreach (Task currTask in currBoard.tasks)
+            foreach (Task currTask in currBoard.tasks.Where(t=> t.status != Globals.statusDone))
             {
                 // TODO: Check who should do this by the algo
                 currTask.RunGA();
