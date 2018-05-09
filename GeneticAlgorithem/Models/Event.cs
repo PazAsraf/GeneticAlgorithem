@@ -23,6 +23,9 @@ namespace GeneticAlgorithem.Models
 
         public bool doesEventsOverlapping(Event otherEvent)
         {
+            return otherEvent.startDate.ToLocalTime() < this.endDate && otherEvent.endDate.ToLocalTime() > this.startDate;
+
+            /*
             // if the events start time is the same
             if (DateTime.Compare(this.startDate, otherEvent.startDate) == 0)
             {
@@ -43,7 +46,7 @@ namespace GeneticAlgorithem.Models
             else
             {
                 return false;
-            }
+            }*/
         }
     }
 }

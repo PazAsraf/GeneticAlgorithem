@@ -37,6 +37,8 @@ namespace GeneticAlgorithem.Models
                 // TODO: Check who should do this by the algo
                 currTask.RunGA();
             }
+
+            // save board/return board
         }
     }
 }

@@ -17,5 +17,16 @@ namespace GeneticAlgorithem.Models
 
         [DataMember]
         public string image { get; set; }
+
+        [DataMember]
+        public string color { get; set; }
+
+
+        public Dictionary<string, Event> taskBestTiming { get; set; }
+
+        public User()
+        {
+            this.taskBestTiming = new Dictionary<string, Event>();
+        }
     }
 }

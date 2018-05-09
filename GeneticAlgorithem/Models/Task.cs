@@ -6,6 +6,8 @@ using System.Runtime.Serialization;
 using GAF;
 using GAF.Operators;
 using GAF.Extensions;
+using MongoDB.Driver;
+using System.Web.Configuration;
 
 namespace GeneticAlgorithem.Models
 {
@@ -68,7 +70,8 @@ namespace GeneticAlgorithem.Models
             var ga = new GeneticAlgorithm(population, CalculateFitness);
 
             //subscribe to the GAs Generation Complete event 
-            ga.OnGenerationComplete += ga_OnGenerationComplete;
+            //ga.OnGenerationComplete += ga_OnGenerationComplete;
+            ga.OnRunComplete += ga_OnRunComplete;
 
             //add the operators to the ga process pipeline 
             ga.Operators.Add(elite);
@@ -85,7 +88,7 @@ namespace GeneticAlgorithem.Models
             User currUser = (User)chromosome.Genes[0].ObjectValue;
 
             // Get the user calender
-            Calendar userCalendar = GA.allCalenders.FirstOrDefault(c => c.userId == currUser.uid);
+            Calendar userCalendar = GA.allCalenders.FirstOrDefault(c => c.uid == currUser.uid);
 
             // Create event for the task
             // the event is start in 9am and end in 9+remaining time of the task
@@ -93,65 +96,103 @@ namespace GeneticAlgorithem.Models
             {
                 title = this.title,
                 eventId = System.Guid.NewGuid().ToString(),
-                startDate = GA.currBoard.startDate.Date.AddHours(Globals.workStartHour),
-                endDate = GA.currBoard.startDate.Date.AddHours(Globals.workStartHour).AddHours(this.remainingTime)
+                startDate = GA.currBoard.startDate.ToLocalTime().Date.AddHours(Globals.workStartHour),
+                endDate = GA.currBoard.startDate.ToLocalTime().Date.AddHours(Globals.workStartHour).AddHours(this.remainingTime)
             };
 
             // Check if time is ok 
             // start date is today or forword
-            // else -> increase event time with 30m
-            // TODO
-
+            if (newEvent.startDate.Date < DateTime.Today.Date)
+            {
+                newEvent.startDate = DateTime.Today.Date.AddHours(Globals.workStartHour);
+                newEvent.endDate = DateTime.Today.Date.AddHours(Globals.workStartHour).AddHours(this.remainingTime);
+            }
             
             // Check event fitness in the calender
             if (userCalendar == null)
             {
                 // the user has nothing in the calender so his fitness is high!
-                // TODO
+                // TODO - return fitness highest! ?? 
+                currUser.taskBestTiming[this.taskId] = newEvent;
+
+                return 1;
             }
             else
             {
+                // Get only event in the time of the calender
+                userCalendar.events = userCalendar.events.Where(c => c.startDate >= DateTime.Today && c.endDate <= GA.currBoard.endDate).ToList();
+
                 // The user has events in the calender so we need to check when is the best time to put this task-event
-                foreach (Event existEvent in userCalendar.events)
+                foreach (Event existEvent in userCalendar.events.OrderBy(x => x.startDate))
                 {
                     if (newEvent.doesEventsOverlapping(existEvent))
                     {
                         // if event is overlapping 
-                        // increment time with half hour until end day time
-                        // call foreach again and decreas fitness score
+                        newEvent.startDate = existEvent.endDate.ToLocalTime();
+                        newEvent.endDate = existEvent.endDate.ToLocalTime().AddHours(this.remainingTime);
+
+                        // decreas fitness score
+                    }
+                    else
+                    {
                         break;
                     }
+                }
+
+                if (newEvent.endDate > GA.currBoard.endDate)
+                {
+                    // fintess 0
+                    return 0;
+                }
+                else
+                {
+                    currUser.taskBestTiming[this.taskId] = newEvent;
+                    TimeSpan fit = newEvent.startDate - GA.currBoard.startDate;
+                    
+                    return (1 / (fit.TotalHours.Equals(0) ? 1 : fit.TotalHours));
                 }
             }
 
             // return default fitness
-            return 0;
+            //return 0;
         }
         
         public bool TerminateAlgorithm(Population population,
         int currentGeneration, long currentEvaluation)
         {
-            return currentGeneration > 400;
+            return currentGeneration > 10;
         }
 
-        private void ga_OnGenerationComplete(object sender, GaEventArgs e)
+        private void ga_OnRunComplete(object sender, GaEventArgs e)
         {
             //get the best solution 
-            var chromosome = e.Population.GetTop(1)[0];
+            //get the current user specified in the chromosome
+            User currUser = (User)e.Population.GetTop(1)[0].Genes[0].ObjectValue;
 
-            //decode chromosome
+            // get the event best timing
+            Event bestEvent = currUser.taskBestTiming[this.taskId];
 
-            //get x and y from the solution 
-            var x1 = Convert.ToInt32(chromosome.ToBinaryString(0, chromosome.Count / 2), 2);
-            var y1 = Convert.ToInt32(chromosome.ToBinaryString(chromosome.Count / 2, chromosome.Count / 2), 2);
+            // save event in program
+            Calendar userCalendar = GA.allCalenders.FirstOrDefault(c => c.uid == currUser.uid);
 
-            //Adjust range to -100 to +100 
-            var rangeConst = 200 / (System.Math.Pow(2, chromosome.Count / 2) - 1);
-            var x = (x1 * rangeConst) - 100;
-            var y = (y1 * rangeConst) - 100;
+            if (userCalendar == null)
+            {
+                userCalendar = new Calendar()
+                {
+                    uid = currUser.uid
+                };
+            }
 
-            //display the X, Y and fitness of the best chromosome in this generation 
-            Console.WriteLine("x:{0} y:{1} Fitness{2}", x, y, e.Population.MaximumFitness);
+            userCalendar.events.Add(bestEvent);
+            this.owner = currUser;
+            // save to the db
+            MongoClient conn = new MongoClient(Globals.Connection_String);
+
+            IMongoDatabase database = conn.GetDatabase(WebConfigurationManager.AppSettings[Globals.Web_Config_Key_DB]);
+
+            IMongoCollection<Calendar> calendersCollection = database.GetCollection<Calendar>(Globals.CalendersCollection);
+
+            // upsert to the db the current user calendar- TODO
         }
     }
 }

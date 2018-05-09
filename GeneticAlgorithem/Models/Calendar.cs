@@ -15,9 +15,14 @@ namespace GeneticAlgorithem.Models
         public ObjectId _id { get; set; }
 
         [DataMember]
-        public string userId { get; set; }
+        public string uid { get; set; }
 
         [DataMember]
         public List<Event> events { get; set; }
+
+        public Calendar()
+        {
+            this.events = new List<Event>();
+        }
     }
 }

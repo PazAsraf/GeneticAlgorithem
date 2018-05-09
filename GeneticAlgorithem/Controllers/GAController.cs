@@ -20,6 +20,9 @@ namespace GeneticAlgorithem.Controllers
         public string Get(string boardId)
         {
             GA.GetAllBoardData(boardId);
+
+            GA.SplitTasks();
+
             return "value";
         }
 
