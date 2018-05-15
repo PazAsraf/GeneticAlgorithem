@@ -105,7 +105,7 @@ namespace GeneticAlgorithem.Models
             if (newEvent.startDate.Date < DateTime.Today.Date)
             {
                 newEvent.startDate = DateTime.Today.Date.AddHours(Globals.workStartHour);
-                newEvent.endDate = DateTime.Today.Date.AddHours(Globals.workStartHour).AddHours(this.remainingTime);
+                newEvent.endDate = newEvent.startDate.AddHours(this.remainingTime);
             }
             
             // Check event fitness in the calender
@@ -129,7 +129,14 @@ namespace GeneticAlgorithem.Models
                     {
                         // if event is overlapping 
                         newEvent.startDate = existEvent.endDate.ToLocalTime();
-                        newEvent.endDate = existEvent.endDate.ToLocalTime().AddHours(this.remainingTime);
+                        newEvent.endDate = newEvent.startDate.AddHours(this.remainingTime);
+
+                        // make sure that the timing is in not after the work time
+                        if (newEvent.endDate.Hour > Globals.workEndtHour)
+                        {
+                            newEvent.startDate = newEvent.startDate.Date.AddDays(1).AddDays(Globals.workStartHour);
+                            newEvent.endDate = newEvent.startDate.AddHours(this.remainingTime);
+                        }
 
                         // decreas fitness score
                     }
